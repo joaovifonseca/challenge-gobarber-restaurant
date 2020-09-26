@@ -1,153 +1,103 @@
-import React, { useEffect, useState } from 'react';
-import { Image, ScrollView } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
 
-import Icon from 'react-native-vector-icons/Feather';
 import { useNavigation } from '@react-navigation/native';
-import Logo from '../../assets/logo-header.png';
-import SearchInput from '../../components/SearchInput';
-
+import Icon from 'react-native-vector-icons/Feather';
 import api from '../../services/api';
-import formatValue from '../../utils/formatValue';
+
+import { useAuth } from '../../hooks/auth';
 
 import {
   Container,
   Header,
-  FilterContainer,
-  Title,
-  CategoryContainer,
-  CategorySlider,
-  CategoryItem,
-  CategoryItemTitle,
-  FoodsContainer,
-  FoodList,
-  Food,
-  FoodImageContainer,
-  FoodContent,
-  FoodTitle,
-  FoodDescription,
-  FoodPricing,
+  HeaderTitle,
+  UserName,
+  ProfileButton,
+  UserAvatar,
+  ProvidersList,
+  ProvidersListTitle,
+  ProviderContainer,
+  ProviderAvatar,
+  ProviderName,
+  ProviderInfo,
+  ProviderMeta,
+  ProviderMetaText,
 } from './styles';
 
-interface Food {
-  id: number;
+export interface Provider {
+  id: string;
   name: string;
-  description: string;
-  price: number;
-  thumbnail_url: string;
-  formattedPrice: string;
-}
-
-interface Category {
-  id: number;
-  title: string;
-  image_url: string;
+  avatar_url: string;
 }
 
 const Dashboard: React.FC = () => {
-  const [foods, setFoods] = useState<Food[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<
-    number | undefined
-  >();
-  const [searchValue, setSearchValue] = useState('');
+  const { user } = useAuth();
+  const { navigate } = useNavigation();
 
-  const navigation = useNavigation();
-
-  async function handleNavigate(id: number): Promise<void> {
-    // Navigate do ProductDetails page
-  }
+  const [providers, setProviders] = useState<Provider[]>([]);
 
   useEffect(() => {
-    async function loadFoods(): Promise<void> {
-      // Load Foods from API
+    async function loadProviders() {
+      const response = await api.get('/providers');
+
+      setProviders(response.data);
     }
 
-    loadFoods();
-  }, [selectedCategory, searchValue]);
-
-  useEffect(() => {
-    async function loadCategories(): Promise<void> {
-      // Load categories from API
-    }
-
-    loadCategories();
+    loadProviders();
   }, []);
 
-  function handleSelectCategory(id: number): void {
-    // Select / deselect category
-  }
+  const navigateToProfile = useCallback(() => {
+    navigate('Profile');
+  }, [navigate]);
+
+  const navigateToCreateAppointment = useCallback(
+    (providerId: string) => {
+      navigate('CreateAppointment', { providerId });
+    },
+    [navigate],
+  );
 
   return (
     <Container>
       <Header>
-        <Image source={Logo} />
-        <Icon
-          name="log-out"
-          size={24}
-          color="#FFB84D"
-          onPress={() => navigation.navigate('Home')}
-        />
+        <HeaderTitle>
+          Bem-vindo,
+          {'\n'}
+          <UserName>{user.name}</UserName>
+        </HeaderTitle>
+
+        <ProfileButton onPress={navigateToProfile}>
+          <UserAvatar source={{ uri: user.avatar_url }} />
+        </ProfileButton>
       </Header>
-      <FilterContainer>
-        <SearchInput
-          value={searchValue}
-          onChangeText={setSearchValue}
-          placeholder="Qual comida você procura?"
-        />
-      </FilterContainer>
-      <ScrollView>
-        <CategoryContainer>
-          <Title>Categorias</Title>
-          <CategorySlider
-            contentContainerStyle={{
-              paddingHorizontal: 20,
-            }}
-            horizontal
-            showsHorizontalScrollIndicator={false}
+
+      <ProvidersList
+        data={providers}
+        keyExtractor={provider => provider.id}
+        ListHeaderComponent={
+          <ProvidersListTitle>Cabeleireiros</ProvidersListTitle>
+        }
+        renderItem={({ item: provider }) => (
+          <ProviderContainer
+            onPress={() => navigateToCreateAppointment(provider.id)}
           >
-            {categories.map(category => (
-              <CategoryItem
-                key={category.id}
-                isSelected={category.id === selectedCategory}
-                onPress={() => handleSelectCategory(category.id)}
-                activeOpacity={0.6}
-                testID={`category-${category.id}`}
-              >
-                <Image
-                  style={{ width: 56, height: 56 }}
-                  source={{ uri: category.image_url }}
-                />
-                <CategoryItemTitle>{category.title}</CategoryItemTitle>
-              </CategoryItem>
-            ))}
-          </CategorySlider>
-        </CategoryContainer>
-        <FoodsContainer>
-          <Title>Pratos</Title>
-          <FoodList>
-            {foods.map(food => (
-              <Food
-                key={food.id}
-                onPress={() => handleNavigate(food.id)}
-                activeOpacity={0.6}
-                testID={`food-${food.id}`}
-              >
-                <FoodImageContainer>
-                  <Image
-                    style={{ width: 88, height: 88 }}
-                    source={{ uri: food.thumbnail_url }}
-                  />
-                </FoodImageContainer>
-                <FoodContent>
-                  <FoodTitle>{food.name}</FoodTitle>
-                  <FoodDescription>{food.description}</FoodDescription>
-                  <FoodPricing>{food.formattedPrice}</FoodPricing>
-                </FoodContent>
-              </Food>
-            ))}
-          </FoodList>
-        </FoodsContainer>
-      </ScrollView>
+            <ProviderAvatar source={{ uri: provider.avatar_url }} />
+
+            <ProviderInfo>
+              <ProviderName>{provider.name}</ProviderName>
+
+              <ProviderMeta>
+                <Icon name="calendar" size={14} color="#ff9000" />
+                <ProviderMetaText>Segunda à sexta</ProviderMetaText>
+              </ProviderMeta>
+
+              <ProviderMeta>
+                <Icon name="clock" size={14} color="#ff9000" />
+                <ProviderMetaText>8h às 18h</ProviderMetaText>
+              </ProviderMeta>
+            </ProviderInfo>
+          </ProviderContainer>
+        )}
+      />
     </Container>
   );
 };
